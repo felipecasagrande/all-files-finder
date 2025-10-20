@@ -167,7 +167,7 @@ with col2:
         tipo_count.set_index("Tipo").sort_values(by="Quantidade", ascending=False)
     )
 
-
+"""
 # ======================================================
 # 📊 CONTAGEM POR PASTA
 # ======================================================
@@ -182,6 +182,7 @@ if "Local" in df.columns:
         st.bar_chart(pasta_count.head(20).set_index("Pasta"))
 else:
     st.warning("Coluna 'Local' não encontrada.")
+"""
 
 # =========================================
 # 📊 GRÁFICO TEMPORAL
