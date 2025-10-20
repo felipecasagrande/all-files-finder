@@ -127,8 +127,17 @@ st.subheader("📄 Lista de arquivos filtrados")
 cols_exibir = ["Nome", "Tamanho", "Local", "Modificado em", "Tipo"]
 cols_existentes = [c for c in cols_exibir if c in filtered.columns]
 # 🕓 Ordenar por 'Modificado em' (mais recentes primeiro)
+# 🕓 Ordenar por 'Modificado em' (mais recentes primeiro)
 if "Modificado em" in filtered.columns:
     filtered = filtered.sort_values(by="Modificado em", ascending=False)
+
+# 📊 Exibir tabela maior
+st.dataframe(
+    filtered[cols_existentes].head(10000),
+    width="stretch",
+    height=800  # 🔹 aumenta a altura da tabela
+)
+
     
 st.dataframe(filtered[cols_existentes].head(10000), width="stretch")
 
