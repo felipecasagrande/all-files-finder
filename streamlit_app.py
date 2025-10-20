@@ -155,22 +155,37 @@ if "Local" in df.columns:
 else:
     st.warning("Coluna 'Local' não encontrada.")
 
-# ======================================================
-# 📅 GRÁFICO TEMPORAL
-# ======================================================
-st.subheader("📅 Evolução de modificações ao longo do tempo")
+# =========================================
+# 📊 GRÁFICO TEMPORAL
+# =========================================
+st.subheader("📈 Evolução de modificações ao longo do tempo")
+
 if not df["Modificado em"].isna().all():
     df["Ano-Mês"] = df["Modificado em"].dt.to_period("M").astype(str)
-    evolucao = df.groupby(["Ano-Mês", "Tipo"]).size().reset_index(name="Quantidade")
 
-    # Exibir por tipo de arquivo (multilinhas)
+    # 🔹 Filtro: apenas de 2020 em diante
+    df = df[df["Modificado em"].dt.year >= 2020]
+
+    evolucao = (
+        df.groupby(["Ano-Mês", "Tipo"])
+        .size()
+        .reset_index(name="Quantidade")
+    )
+
+    # Exibir gráfico (multilinhas)
     import altair as alt
-    chart = alt.Chart(evolucao).mark_line(point=True).encode(
-        x="Ano-Mês:T",
-        y="Quantidade:Q",
-        color="Tipo:N",
-        tooltip=["Ano-Mês", "Tipo", "Quantidade"]
-    ).properties(width=1000, height=400)
+    chart = (
+        alt.Chart(evolucao)
+        .mark_line(point=True)
+        .encode(
+            x="Ano-Mês:T",
+            y="Quantidade:Q",
+            color="Tipo:N",
+            tooltip=["Ano-Mês", "Tipo", "Quantidade"]
+        )
+        .properties(width=1000, height=400)
+    )
+
     st.altair_chart(chart, use_container_width=True)
 else:
     st.info("Nenhuma data válida encontrada na coluna 'Modificado em'.")
