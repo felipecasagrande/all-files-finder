@@ -98,7 +98,7 @@ else:
 df = df[df["Tipo"].isin(tipos_validos)].reset_index(drop=True)
 
 # Remover .py modificados antes de 2025
-df = df[~((df["Tipo"] == ".py") & (df["Modificado em"].dt.year > 2020))]
+df = df[~((df["Tipo"] == ".py") & (df["Modificado em"].dt.year < 2020))]
 
 st.success(f"🔍 {len(df):,} arquivos válidos carregados ({len(tipos_validos)} tipos permitidos).")
 
