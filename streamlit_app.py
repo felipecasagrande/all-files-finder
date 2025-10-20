@@ -75,9 +75,9 @@ st.success(f"✅ Arquivo carregado com {df.shape[0]:,} linhas e {df.shape[1]} co
 # 🧩 CRIAR COLUNA "TIPO" E FILTRAR EXTENSÕES
 # ======================================================
 tipos_validos = [
-    ".xlsx", ".csv", ".xls", ".ipynb", ".pbix", ".json", ".xml", ".pdf", ".docx",
-    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp",  # imagens
-    ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"     # vídeos
+    ".xlsx", ".csv", ".xls", ".ipynb", ".pbix", ".json", ".pdf", ".docx",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp",  # imagens
+    ".mp4", ".avi", ".mkv", ".mov", ".wmv"     # vídeos
 ]
 
 if "Nome" not in df.columns:
@@ -98,7 +98,7 @@ else:
 df = df[df["Tipo"].isin(tipos_validos)].reset_index(drop=True)
 
 # Remover .py modificados antes de 2025
-df = df[~((df["Tipo"] == ".py") & (df["Modificado em"].dt.year < 2025))]
+df = df[~((df["Tipo"] == ".py") & (df["Modificado em"].dt.year > 2020))]
 
 st.success(f"🔍 {len(df):,} arquivos válidos carregados ({len(tipos_validos)} tipos permitidos).")
 
@@ -125,7 +125,7 @@ st.markdown(f"**{len(filtered):,} registros filtrados.**")
 st.subheader("📄 Lista de arquivos filtrados")
 cols_exibir = ["Nome", "Tamanho", "Local", "Modificado em", "Tipo"]
 cols_existentes = [c for c in cols_exibir if c in filtered.columns]
-st.dataframe(filtered[cols_existentes].head(100), width="stretch")
+st.dataframe(filtered[cols_existentes].head(10000), width="stretch")
 
 # ======================================================
 # 📊 CONTAGEM POR TIPO
