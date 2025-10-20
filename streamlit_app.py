@@ -180,7 +180,26 @@ if not df["Modificado em"].isna().all():
         df.groupby(["Ano-Mês", "Tipo"])
         .size()
         .reset_index(name="Quantidade")
+        .sort_values(by="Ano-Mês", ascending=True)  # ✅ Ordenação ascendente
     )
+
+    import altair as alt
+    chart = (
+        alt.Chart(evolucao)
+        .mark_line(point=True)
+        .encode(
+            x="Ano-Mês:T",
+            y="Quantidade:Q",
+            color="Tipo:N",
+            tooltip=["Ano-Mês", "Tipo", "Quantidade"]
+        )
+        .properties(width=1000, height=400)
+    )
+
+    st.altair_chart(chart, use_container_width=True)
+else:
+    st.info("Nenhuma data válida encontrada na coluna 'Modificado em'.")
+
 
     # Exibir gráfico (multilinhas)
     import altair as alt
