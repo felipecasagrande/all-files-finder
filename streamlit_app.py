@@ -135,11 +135,11 @@ if "Modificado em" in filtered.columns:
 st.dataframe(
     filtered[cols_existentes].head(10000),
     width="stretch",
-    height=800  # 🔹 aumenta a altura da tabela
+    height=600  # 🔹 aumenta a altura da tabela
 )
 
     
-st.dataframe(filtered[cols_existentes].head(10000), width="stretch")
+
 
 # =========================================
 # 📁 CONTAGEM POR TIPO
