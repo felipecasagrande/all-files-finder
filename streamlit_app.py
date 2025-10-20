@@ -126,6 +126,10 @@ st.markdown(f"**{len(filtered):,} registros filtrados.**")
 st.subheader("📄 Lista de arquivos filtrados")
 cols_exibir = ["Nome", "Tamanho", "Local", "Modificado em", "Tipo"]
 cols_existentes = [c for c in cols_exibir if c in filtered.columns]
+# 🕓 Ordenar por 'Modificado em' (mais recentes primeiro)
+if "Modificado em" in filtered.columns:
+    filtered = filtered.sort_values(by="Modificado em", ascending=False)
+    
 st.dataframe(filtered[cols_existentes].head(10000), width="stretch")
 
 # =========================================
