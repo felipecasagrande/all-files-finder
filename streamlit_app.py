@@ -2,17 +2,17 @@ import streamlit as st
 import pandas as pd
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
-import io, json, urllib.parse, socket
+import io, json, os, urllib.parse, socket
 
 # ======================================================
 # 🧭 CONFIGURAÇÕES INICIAIS
 # ======================================================
 st.set_page_config(page_title="All Files Finder - Felipe", layout="wide")
 st.title("📂 All Files Finder - Felipe")
-st.write("Leitura automática de planilhas **XLSX** e **CSV** diretamente da pasta do Google Drive (conectada com credencial segura).")
+st.write("Leitura e filtragem de planilhas CSV/XLSX diretamente do Google Drive com integração segura.")
 
 # ======================================================
-# 💅 ESTILO PERSONALIZADO
+# 💅 CSS PERSONALIZADO
 # ======================================================
 st.markdown("""
 <style>
@@ -44,16 +44,14 @@ button.copy-btn:hover {background-color:#004d4d;}
 """, unsafe_allow_html=True)
 
 # ======================================================
-# ⚙️ DETECTAR AMBIENTE LOCAL OU NUVEM
+# ⚙️ DETECTAR LOCAL/Nuvem
 # ======================================================
 def is_running_locally():
     try:
-        hostname = socket.gethostname()
-        local_ip = socket.gethostbyname(hostname)
-        return local_ip.startswith(("127.", "192.168", "10."))
+        ip = socket.gethostbyname(socket.gethostname())
+        return ip.startswith(("127.", "192.168", "10."))
     except:
         return False
-
 LOCAL_MODE = is_running_locally()
 
 # ======================================================
@@ -84,33 +82,27 @@ if not files:
 
 file_options = {f["name"]: f for f in files}
 selected_file = st.selectbox("📄 Selecione um arquivo:", list(file_options.keys()))
-
 file_id = file_options[selected_file]["id"]
 mime_type = file_options[selected_file]["mimeType"]
 
 # ======================================================
-# 📑 LEITURA DO ARQUIVO
+# 📑 LEITURA OTIMIZADA
 # ======================================================
-with st.spinner("📥 Carregando dados, aguarde..."):
-    request = service.files().get_media(fileId=file_id)
-    file_data = io.BytesIO(request.execute())
+st.info(f"📥 Carregando **{selected_file}**, aguarde alguns segundos...")
 
-    if mime_type == "text/csv" or selected_file.lower().endswith(".csv"):
-        df = pd.read_csv(file_data, encoding="utf-8", sep=None, engine="python")
-    else:
-        df = pd.read_excel(file_data)
+request = service.files().get_media(fileId=file_id)
+file_bytes = io.BytesIO(request.execute())
 
-# Limitar linhas grandes
-MAX_ROWS = 50000
-if len(df) > MAX_ROWS:
-    st.warning(f"⚠️ Arquivo grande ({len(df):,} linhas). Exibindo apenas as primeiras {MAX_ROWS:,} linhas.")
-    df = df.head(MAX_ROWS)
+if mime_type == "text/csv" or selected_file.lower().endswith(".csv"):
+    df = pd.read_csv(file_bytes, encoding="utf-8", sep=None, engine="python")
+else:
+    df = pd.read_excel(file_bytes)
 
-st.success(f"✅ Arquivo carregado com {df.shape[0]} linhas e {df.shape[1]} colunas.")
-st.dataframe(df.head(50), width="stretch")
+st.success(f"✅ Arquivo carregado com {df.shape[0]:,} linhas e {df.shape[1]} colunas.")
+st.dataframe(df.head(200), width="stretch")
 
 # ======================================================
-# 🎯 FILTROS INTERATIVOS
+# 🎯 FILTRO INTERATIVO
 # ======================================================
 st.subheader("🎯 Filtros interativos")
 colunas = df.columns.tolist()
@@ -124,9 +116,9 @@ if valor_filtro:
     mask = df[coluna_filtro].astype(str).str.contains(valor_filtro, case=False, na=False)
     filtered = df[mask]
 else:
-    filtered = df.copy()
+    filtered = df
 
-st.markdown(f"**{len(filtered)} registros filtrados.**")
+st.markdown(f"**{len(filtered):,} registros filtrados.**")
 
 # ======================================================
 # 🧭 LINKS E DATAS FORMATADAS
@@ -156,7 +148,40 @@ if col_local and col_nome:
 
 cols_to_show = [col_nome, "Tamanho", "Porcentagem", "📂 Caminho completo", col_data]
 cols_to_show = [c for c in cols_to_show if c in df_view.columns]
-st.markdown(df_view[cols_to_show].to_html(escape=False, index=False), unsafe_allow_html=True)
+st.markdown(df_view.head(300)[cols_to_show].to_html(escape=False, index=False), unsafe_allow_html=True)
+
+# ======================================================
+# 📊 PRINCIPAIS TIPOS DE ARQUIVO (TOP 20)
+# ======================================================
+st.subheader("📁 Principais tipos de arquivo")
+
+if "Nome" in df.columns:
+    df["Extensão"] = df["Nome"].apply(lambda x: os.path.splitext(str(x))[1].lower().strip())
+    df["Extensão"] = df["Extensão"].replace("", "sem_extensão")
+
+    extensoes = (
+        df["Extensão"]
+        .value_counts()
+        .reset_index()
+        .rename(columns={"index": "Extensão", "Extensão": "Quantidade"})
+        .head(20)
+    )
+
+    relevantes = [".xlsx", ".csv", ".xls", ".py", ".ipynb", ".pbix", ".json", ".xml", ".pdf", ".docx"]
+    for ext in relevantes:
+        if ext not in extensoes["Extensão"].values and ext in df["Extensão"].values:
+            row = {"Extensão": ext, "Quantidade": int((df["Extensão"] == ext).sum())}
+            extensoes = pd.concat([extensoes, pd.DataFrame([row])])
+
+    extensoes = extensoes.sort_values("Quantidade", ascending=False).head(20).reset_index(drop=True)
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.dataframe(extensoes, width="stretch")
+    with col2:
+        st.bar_chart(extensoes.set_index("Extensão"))
+else:
+    st.warning("⚠️ Coluna 'Nome' não encontrada para identificar os tipos de arquivo.")
 
 # ======================================================
 # 📥 DOWNLOAD DO RESULTADO
