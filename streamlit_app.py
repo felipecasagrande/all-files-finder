@@ -167,22 +167,22 @@ with col2:
         tipo_count.set_index("Tipo").sort_values(by="Quantidade", ascending=False)
     )
 
-"""
+
 # ======================================================
 # 📊 CONTAGEM POR PASTA
 # ======================================================
-st.subheader("📂 Contagem por pasta/local")
-if "Local" in df.columns:
-    pasta_count = df["Local"].value_counts().reset_index()
-    pasta_count.columns = ["Pasta", "Arquivos"]
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.dataframe(pasta_count.head(20), width="stretch")
-    with col2:
-        st.bar_chart(pasta_count.head(20).set_index("Pasta"))
-else:
-    st.warning("Coluna 'Local' não encontrada.")
-"""
+#st.subheader("📂 Contagem por pasta/local")
+# if "Local" in df.columns:
+#     pasta_count = df["Local"].value_counts().reset_index()
+#     pasta_count.columns = ["Pasta", "Arquivos"]
+#     col1, col2 = st.columns([1, 2])
+#     with col1:
+#         st.dataframe(pasta_count.head(20), width="stretch")
+#     with col2:
+#         st.bar_chart(pasta_count.head(20).set_index("Pasta"))
+# else:
+#     st.warning("Coluna 'Local' não encontrada.")
+
 
 # =========================================
 # 📊 GRÁFICO TEMPORAL
