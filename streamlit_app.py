@@ -119,6 +119,13 @@ else:
     filtered = df
 
 st.markdown(f"**{len(filtered):,} registros filtrados.**")
+# ======================================================
+# 📋 LISTA DE ARQUIVOS FILTRADOS
+# ======================================================
+st.subheader("📄 Lista de arquivos filtrados")
+cols_exibir = ["Nome", "Tamanho", "Local", "Modificado em", "Tipo"]
+cols_existentes = [c for c in cols_exibir if c in filtered.columns]
+st.dataframe(filtered[cols_existentes].head(100), width="stretch")
 
 # ======================================================
 # 📊 CONTAGEM POR TIPO
@@ -168,13 +175,7 @@ if not df["Modificado em"].isna().all():
 else:
     st.info("Nenhuma data válida encontrada na coluna 'Modificado em'.")
 
-# ======================================================
-# 📋 LISTA DE ARQUIVOS FILTRADOS
-# ======================================================
-st.subheader("📄 Lista de arquivos filtrados")
-cols_exibir = ["Nome", "Tamanho", "Local", "Modificado em", "Tipo"]
-cols_existentes = [c for c in cols_exibir if c in filtered.columns]
-st.dataframe(filtered[cols_existentes].head(100), width="stretch")
+
 
 # ======================================================
 # 📥 DOWNLOAD
