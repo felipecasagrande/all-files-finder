@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
-import io, json, os, urllib.parse
+import io, json, os
 
 # ======================================================
 # ⚙️ CONFIGURAÇÕES
@@ -22,15 +22,6 @@ div[data-baseweb="input"] > div {
     border-radius: 8px !important;
 }
 table a {color:#00ffff;text-decoration:none;}
-button.copy-btn {
-    background-color:#003333;
-    color:#00ffff;
-    border:none;
-    border-radius:6px;
-    padding:4px 8px;
-    cursor:pointer;
-}
-button.copy-btn:hover {background-color:#004d4d;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -48,7 +39,7 @@ except Exception as e:
     st.stop()
 
 # ======================================================
-# 📂 LISTAR ARQUIVOS DISPONÍVEIS
+# 📂 LISTAR ARQUIVOS
 # ======================================================
 results = service.files().list(
     q=f"'{FOLDER_ID}' in parents and (mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or mimeType='text/csv')",
@@ -66,7 +57,7 @@ file_id = file_options[selected_file]["id"]
 mime_type = file_options[selected_file]["mimeType"]
 
 # ======================================================
-# 📑 LEITURA DIRETA (SEM CHUNKS)
+# 📑 LEITURA DO ARQUIVO
 # ======================================================
 st.info(f"📥 Carregando **{selected_file}**, aguarde...")
 
@@ -83,17 +74,33 @@ st.success(f"✅ Arquivo carregado com {df.shape[0]:,} linhas e {df.shape[1]} co
 # ======================================================
 # 🧩 CRIAR COLUNA "TIPO" E FILTRAR EXTENSÕES
 # ======================================================
-tipos_validos = [".xlsx", ".csv", ".xls", ".py", ".ipynb", ".pbix", ".json", ".xml", ".pdf", ".docx"]
+tipos_validos = [
+    ".xlsx", ".csv", ".xls", ".ipynb", ".pbix", ".json", ".xml", ".pdf", ".docx",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp",  # imagens
+    ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"     # vídeos
+]
 
 if "Nome" not in df.columns:
     st.error("⚠️ A planilha precisa ter uma coluna chamada 'Nome'.")
     st.dataframe(df.head(20))
     st.stop()
 
+# Criar coluna Tipo
 df["Tipo"] = df["Nome"].apply(lambda x: os.path.splitext(str(x))[1].lower().strip())
+
+# Converter data
+if "Modificado em" in df.columns:
+    df["Modificado em"] = pd.to_datetime(df["Modificado em"], errors="coerce")
+else:
+    df["Modificado em"] = pd.NaT
+
+# Filtrar somente tipos válidos
 df = df[df["Tipo"].isin(tipos_validos)].reset_index(drop=True)
 
-st.success(f"🔍 {len(df):,} arquivos mantidos ({len(tipos_validos)} tipos permitidos).")
+# Remover .py modificados antes de 2025
+df = df[~((df["Tipo"] == ".py") & (df["Modificado em"].dt.year < 2025))]
+
+st.success(f"🔍 {len(df):,} arquivos válidos carregados ({len(tipos_validos)} tipos permitidos).")
 
 # ======================================================
 # 🎯 FILTRO INTERATIVO
@@ -114,7 +121,7 @@ else:
 st.markdown(f"**{len(filtered):,} registros filtrados.**")
 
 # ======================================================
-# 📊 CONTAGEM POR TIPO DE ARQUIVO
+# 📊 CONTAGEM POR TIPO
 # ======================================================
 st.subheader("📁 Tipos de arquivo válidos")
 tipo_count = df["Tipo"].value_counts().reset_index()
@@ -142,10 +149,32 @@ else:
     st.warning("Coluna 'Local' não encontrada.")
 
 # ======================================================
-# 🧭 FORMATAÇÃO DE DATA
+# 📅 GRÁFICO TEMPORAL
 # ======================================================
-if "Modificado em" in df.columns:
-    df["Modificado em"] = pd.to_datetime(df["Modificado em"], errors="coerce").dt.strftime("%d/%m/%Y")
+st.subheader("📅 Evolução de modificações ao longo do tempo")
+if not df["Modificado em"].isna().all():
+    df["Ano-Mês"] = df["Modificado em"].dt.to_period("M").astype(str)
+    evolucao = df.groupby(["Ano-Mês", "Tipo"]).size().reset_index(name="Quantidade")
+
+    # Exibir por tipo de arquivo (multilinhas)
+    import altair as alt
+    chart = alt.Chart(evolucao).mark_line(point=True).encode(
+        x="Ano-Mês:T",
+        y="Quantidade:Q",
+        color="Tipo:N",
+        tooltip=["Ano-Mês", "Tipo", "Quantidade"]
+    ).properties(width=1000, height=400)
+    st.altair_chart(chart, use_container_width=True)
+else:
+    st.info("Nenhuma data válida encontrada na coluna 'Modificado em'.")
+
+# ======================================================
+# 📋 LISTA DE ARQUIVOS FILTRADOS
+# ======================================================
+st.subheader("📄 Lista de arquivos filtrados")
+cols_exibir = ["Nome", "Tamanho", "Local", "Modificado em", "Tipo"]
+cols_existentes = [c for c in cols_exibir if c in filtered.columns]
+st.dataframe(filtered[cols_existentes].head(100), width="stretch")
 
 # ======================================================
 # 📥 DOWNLOAD
