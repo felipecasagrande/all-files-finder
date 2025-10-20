@@ -5,14 +5,14 @@ from google.oauth2 import service_account
 import io, json, os, urllib.parse, socket
 
 # ======================================================
-# 🧭 CONFIGURAÇÕES INICIAIS
+# ⚙️ CONFIGURAÇÕES
 # ======================================================
 st.set_page_config(page_title="All Files Finder - Felipe", layout="wide")
 st.title("📂 All Files Finder - Felipe")
 st.write("Leitura e filtragem de planilhas CSV/XLSX diretamente do Google Drive com integração segura.")
 
 # ======================================================
-# 💅 CSS PERSONALIZADO
+# 💅 CSS
 # ======================================================
 st.markdown("""
 <style>
@@ -20,17 +20,8 @@ div[data-baseweb="input"] > div {
     border: 2px solid #00ffff !important;
     box-shadow: 0 0 10px rgba(0,255,255,0.3);
     border-radius: 8px !important;
-    transition: border 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
-div[data-baseweb="input"] > div:focus-within {
-    border: 2px solid #00e0e0 !important;
-    box-shadow: 0 0 14px rgba(0,255,255,0.6);
-}
-input:disabled {opacity:1 !important;color:#fff !important;}
-div[data-baseweb="input"] input {color:#e8ffff !important;font-weight:500;}
-div[data-baseweb="input"] input::placeholder {color:#aefcff !important;opacity:0.7;}
 table a {color:#00ffff;text-decoration:none;}
-table a:hover {text-decoration:underline;color:#00e0e0;}
 button.copy-btn {
     background-color:#003333;
     color:#00ffff;
@@ -44,19 +35,7 @@ button.copy-btn:hover {background-color:#004d4d;}
 """, unsafe_allow_html=True)
 
 # ======================================================
-# ⚙️ DETECTAR LOCAL/Nuvem
-# ======================================================
-def is_running_locally():
-    try:
-        ip = socket.gethostbyname(socket.gethostname())
-        return ip.startswith(("127.", "192.168", "10."))
-    except:
-        return False
-
-LOCAL_MODE = is_running_locally()
-
-# ======================================================
-# 🔐 CONEXÃO GOOGLE DRIVE
+# 🔐 GOOGLE DRIVE
 # ======================================================
 try:
     creds_json = st.secrets["GCP_SA_KEY"]
@@ -65,11 +44,11 @@ try:
     service = build("drive", "v3", credentials=creds)
     FOLDER_ID = "15ToUbVb9fKNDFECffoHWGr3R22_sj4Fy"
 except Exception as e:
-    st.error(f"⚠️ Erro ao carregar credenciais: {e}")
+    st.error(f"Erro nas credenciais: {e}")
     st.stop()
 
 # ======================================================
-# 📁 LISTAR ARQUIVOS NA PASTA
+# 📂 LISTAR ARQUIVOS
 # ======================================================
 results = service.files().list(
     q=f"'{FOLDER_ID}' in parents and (mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or mimeType='text/csv')",
@@ -78,7 +57,7 @@ results = service.files().list(
 
 files = results.get("files", [])
 if not files:
-    st.warning("⚠️ Nenhum arquivo Excel ou CSV encontrado na pasta do Google Drive.")
+    st.warning("Nenhum arquivo encontrado.")
     st.stop()
 
 file_options = {f["name"]: f for f in files}
@@ -87,9 +66,9 @@ file_id = file_options[selected_file]["id"]
 mime_type = file_options[selected_file]["mimeType"]
 
 # ======================================================
-# 📑 LEITURA DIRETA (SEM CHUNKS)
+# 📥 LEITURA DIRETA (SEM CHUNKS)
 # ======================================================
-st.info(f"📥 Carregando **{selected_file}**, aguarde alguns segundos...")
+st.info(f"📥 Carregando **{selected_file}**, aguarde...")
 
 request = service.files().get_media(fileId=file_id)
 file_bytes = io.BytesIO(request.execute())
@@ -102,89 +81,68 @@ else:
 st.success(f"✅ Arquivo carregado com {df.shape[0]:,} linhas e {df.shape[1]} colunas.")
 
 # ======================================================
-# 🧩 CRIA A COLUNA "TIPO" E FILTRA APENAS OS TIPOS DE INTERESSE
+# 🧭 DETECTAR COLUNAS AUTOMATICAMENTE
+# ======================================================
+colunas_lower = [c.lower().strip() for c in df.columns]
+mapa = dict(zip(colunas_lower, df.columns))
+
+col_nome = next((mapa[c] for c in colunas_lower if any(x in c for x in ["nome", "name", "arquivo", "file"])), None)
+col_local = next((mapa[c] for c in colunas_lower if any(x in c for x in ["local", "path", "diret", "folder"])), None)
+col_data = next((mapa[c] for c in colunas_lower if "modific" in c or "data" in c), None)
+
+if not col_nome:
+    st.error("⚠️ Nenhuma coluna de nome de arquivo foi identificada. Verifique o cabeçalho.")
+    st.dataframe(df.head(20))
+    st.stop()
+
+# ======================================================
+# 🧩 COLUNA TIPO + FILTRO DE EXTENSÕES
 # ======================================================
 tipos_validos = [".xlsx", ".csv", ".xls", ".py", ".ipynb", ".pbix", ".json", ".xml", ".pdf", ".docx"]
 
-if "Nome" in df.columns:
-    df["Tipo"] = df["Nome"].apply(lambda x: os.path.splitext(str(x))[1].lower().strip())
-    df = df[df["Tipo"].isin(tipos_validos)].reset_index(drop=True)
-    st.success(f"🔍 Apenas {len(df):,} arquivos válidos mantidos ({len(tipos_validos)} tipos permitidos).")
-else:
-    st.warning("⚠️ Coluna 'Nome' não encontrada. Verifique o cabeçalho do arquivo.")
-    st.stop()
+df["Tipo"] = df[col_nome].apply(lambda x: os.path.splitext(str(x))[1].lower().strip())
+df = df[df["Tipo"].isin(tipos_validos)].reset_index(drop=True)
 
-# Preview parcial
+st.success(f"🔍 Apenas {len(df):,} arquivos válidos mantidos ({len(tipos_validos)} tipos permitidos).")
+
 st.dataframe(df.head(200), width="stretch")
 
 # ======================================================
-# 🎯 FILTRO INTERATIVO
+# 📊 CONTAGEM POR PASTA
 # ======================================================
-st.subheader("🎯 Filtros interativos")
-colunas = df.columns.tolist()
-col1, col2 = st.columns(2)
-with col1:
-    coluna_filtro = st.selectbox("Coluna para filtrar", colunas)
-with col2:
-    valor_filtro = st.text_input("Valor (parte ou completo)")
+st.subheader("📁 Contagem por pasta/local")
 
-if valor_filtro:
-    mask = df[coluna_filtro].astype(str).str.contains(valor_filtro, case=False, na=False)
-    filtered = df[mask]
+if col_local:
+    df["Pasta"] = df[col_local].apply(lambda x: str(x).strip().replace("\\\\", "\\"))
+    pasta_count = df["Pasta"].value_counts().reset_index()
+    pasta_count.columns = ["Pasta", "Arquivos"]
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.dataframe(pasta_count.head(20), width="stretch")
+    with col2:
+        st.bar_chart(pasta_count.head(20).set_index("Pasta"))
 else:
-    filtered = df
-
-st.markdown(f"**{len(filtered):,} registros filtrados.**")
+    st.info("⚠️ Coluna de local/pasta não encontrada.")
 
 # ======================================================
-# 🧭 LINKS E DATAS FORMATADAS
+# 📈 CONTAGEM POR TIPO
 # ======================================================
-df_view = filtered.copy()
-col_nome = next((c for c in df_view.columns if "nome" in c.lower()), None)
-col_local = next((c for c in df_view.columns if "local" in c.lower()), None)
-col_data = next((c for c in df_view.columns if "modific" in c.lower()), None)
+st.subheader("📊 Tipos de arquivo válidos")
 
-if col_data:
-    df_view[col_data] = pd.to_datetime(df_view[col_data], errors="coerce").dt.strftime("%d/%m/%Y")
+tipo_count = df["Tipo"].value_counts().reset_index()
+tipo_count.columns = ["Tipo", "Quantidade"]
 
-if col_local and col_nome:
-    if LOCAL_MODE:
-        df_view["📂 Caminho completo"] = df_view.apply(
-            lambda x: f'<a href="file:///{urllib.parse.quote(str(x[col_local]).replace("\\\\", "/") + "/" + str(x[col_nome]))}" target="_blank">{x[col_local]}</a>',
-            axis=1
-        )
-    else:
-        def make_copy_button(path, name):
-            full_path = f"{path}\\{name}"
-            return f'<button class="copy-btn" onclick="navigator.clipboard.writeText(\'{full_path}\')">📋 Copiar caminho</button>'
-        df_view["📂 Caminho completo"] = df_view.apply(
-            lambda x: make_copy_button(str(x[col_local]), str(x[col_nome])),
-            axis=1
-        )
-
-cols_to_show = [col_nome, "Tipo", "Tamanho", "📂 Caminho completo", col_data]
-cols_to_show = [c for c in cols_to_show if c in df_view.columns]
-st.markdown(df_view.head(300)[cols_to_show].to_html(escape=False, index=False), unsafe_allow_html=True)
-
-# ======================================================
-# 📊 VISÃO POR TIPO DE ARQUIVO
-# ======================================================
-st.subheader("📁 Tipos de arquivo encontrados")
-extensoes = (
-    df["Tipo"].value_counts()
-    .reset_index()
-    .rename(columns={"index": "Tipo", "Tipo": "Quantidade"})
-)
 col1, col2 = st.columns([1, 2])
 with col1:
-    st.dataframe(extensoes, width="stretch")
+    st.dataframe(tipo_count, width="stretch")
 with col2:
-    st.bar_chart(extensoes.set_index("Tipo"))
+    st.bar_chart(tipo_count.set_index("Tipo"))
 
 # ======================================================
-# 📥 DOWNLOAD DO RESULTADO
+# 📥 DOWNLOAD
 # ======================================================
-csv_data = filtered.to_csv(index=False).encode("utf-8")
+csv_data = df.to_csv(index=False).encode("utf-8")
 st.download_button(
     label="⬇️ Baixar CSV filtrado",
     data=csv_data,
