@@ -127,18 +127,27 @@ cols_exibir = ["Nome", "Tamanho", "Local", "Modificado em", "Tipo"]
 cols_existentes = [c for c in cols_exibir if c in filtered.columns]
 st.dataframe(filtered[cols_existentes].head(10000), width="stretch")
 
-# ======================================================
-# 📊 CONTAGEM POR TIPO
-# ======================================================
-st.subheader("📁 Tipos de arquivo válidos")
+# =========================================
+# 📁 CONTAGEM POR TIPO
+# =========================================
+st.subheader("📂 Tipos de arquivo válidos")
+
+# Contagem e ordenação decrescente
 tipo_count = df["Tipo"].value_counts().reset_index()
 tipo_count.columns = ["Tipo", "Quantidade"]
+tipo_count = tipo_count.sort_values(by="Quantidade", ascending=True)
 
 col1, col2 = st.columns([1, 2])
+
 with col1:
     st.dataframe(tipo_count, width="stretch")
+
 with col2:
-    st.bar_chart(tipo_count.set_index("Tipo"))
+    # 🔹 Gráfico ordenado
+    st.bar_chart(
+        tipo_count.set_index("Tipo").sort_values(by="Quantidade", ascending=False)
+    )
+
 
 # ======================================================
 # 📊 CONTAGEM POR PASTA
