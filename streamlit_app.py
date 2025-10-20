@@ -96,10 +96,15 @@ else:
     df["Modificado em"] = pd.NaT
 
 # Filtrar somente tipos válidos
+# Filtrar somente tipos válidos
 df = df[df["Tipo"].isin(tipos_validos)].reset_index(drop=True)
 
+# 🚫 Ignorar arquivos da pasta C:\Users\flpno\AppData\
+if "Local" in df.columns:
+    df = df[~df["Local"].astype(str).str.startswith(r"C:\Users\flpno\AppData", na=False)]
+
 # Remover .py modificados antes de 2025
-df = df[~((df["Tipo"] == ".py") & (df["Modificado em"].dt.year < 2020))]
+df = df[~((df["Tipo"] == ".py") & (df["Modificado em"].dt.year < 2020) & (df["Tamanho"] == "0 B"))]
 
 st.success(f"🔍 {len(df):,} arquivos válidos carregados ({len(tipos_validos)} tipos permitidos).")
 
