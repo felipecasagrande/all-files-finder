@@ -52,6 +52,7 @@ def is_running_locally():
         return ip.startswith(("127.", "192.168", "10."))
     except:
         return False
+
 LOCAL_MODE = is_running_locally()
 
 # ======================================================
@@ -86,7 +87,7 @@ file_id = file_options[selected_file]["id"]
 mime_type = file_options[selected_file]["mimeType"]
 
 # ======================================================
-# 📑 LEITURA OTIMIZADA
+# 📑 LEITURA DIRETA (SEM CHUNKS)
 # ======================================================
 st.info(f"📥 Carregando **{selected_file}**, aguarde alguns segundos...")
 
