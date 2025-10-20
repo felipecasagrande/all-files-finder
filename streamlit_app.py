@@ -100,6 +100,21 @@ else:
     df = pd.read_excel(file_bytes)
 
 st.success(f"✅ Arquivo carregado com {df.shape[0]:,} linhas e {df.shape[1]} colunas.")
+
+# ======================================================
+# 🧩 CRIA A COLUNA "TIPO" E FILTRA APENAS OS TIPOS DE INTERESSE
+# ======================================================
+tipos_validos = [".xlsx", ".csv", ".xls", ".py", ".ipynb", ".pbix", ".json", ".xml", ".pdf", ".docx"]
+
+if "Nome" in df.columns:
+    df["Tipo"] = df["Nome"].apply(lambda x: os.path.splitext(str(x))[1].lower().strip())
+    df = df[df["Tipo"].isin(tipos_validos)].reset_index(drop=True)
+    st.success(f"🔍 Apenas {len(df):,} arquivos válidos mantidos ({len(tipos_validos)} tipos permitidos).")
+else:
+    st.warning("⚠️ Coluna 'Nome' não encontrada. Verifique o cabeçalho do arquivo.")
+    st.stop()
+
+# Preview parcial
 st.dataframe(df.head(200), width="stretch")
 
 # ======================================================
@@ -147,42 +162,24 @@ if col_local and col_nome:
             axis=1
         )
 
-cols_to_show = [col_nome, "Tamanho", "Porcentagem", "📂 Caminho completo", col_data]
+cols_to_show = [col_nome, "Tipo", "Tamanho", "📂 Caminho completo", col_data]
 cols_to_show = [c for c in cols_to_show if c in df_view.columns]
 st.markdown(df_view.head(300)[cols_to_show].to_html(escape=False, index=False), unsafe_allow_html=True)
 
 # ======================================================
-# 📊 PRINCIPAIS TIPOS DE ARQUIVO (TOP 20)
+# 📊 VISÃO POR TIPO DE ARQUIVO
 # ======================================================
-st.subheader("📁 Principais tipos de arquivo")
-
-if "Nome" in df.columns:
-    df["Extensão"] = df["Nome"].apply(lambda x: os.path.splitext(str(x))[1].lower().strip())
-    df["Extensão"] = df["Extensão"].replace("", "sem_extensão")
-
-    extensoes = (
-        df["Extensão"]
-        .value_counts()
-        .reset_index()
-        .rename(columns={"index": "Extensão", "Extensão": "Quantidade"})
-        .head(20)
-    )
-
-    relevantes = [".xlsx", ".csv", ".xls", ".py", ".ipynb", ".pbix", ".json", ".xml", ".pdf", ".docx"]
-    for ext in relevantes:
-        if ext not in extensoes["Extensão"].values and ext in df["Extensão"].values:
-            row = {"Extensão": ext, "Quantidade": int((df["Extensão"] == ext).sum())}
-            extensoes = pd.concat([extensoes, pd.DataFrame([row])])
-
-    extensoes = extensoes.sort_values("Quantidade", ascending=False).head(20).reset_index(drop=True)
-
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.dataframe(extensoes, width="stretch")
-    with col2:
-        st.bar_chart(extensoes.set_index("Extensão"))
-else:
-    st.warning("⚠️ Coluna 'Nome' não encontrada para identificar os tipos de arquivo.")
+st.subheader("📁 Tipos de arquivo encontrados")
+extensoes = (
+    df["Tipo"].value_counts()
+    .reset_index()
+    .rename(columns={"index": "Tipo", "Tipo": "Quantidade"})
+)
+col1, col2 = st.columns([1, 2])
+with col1:
+    st.dataframe(extensoes, width="stretch")
+with col2:
+    st.bar_chart(extensoes.set_index("Tipo"))
 
 # ======================================================
 # 📥 DOWNLOAD DO RESULTADO
