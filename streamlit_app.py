@@ -75,9 +75,10 @@ st.success(f"✅ Arquivo carregado com {df.shape[0]:,} linhas e {df.shape[1]} co
 # 🧩 CRIAR COLUNA "TIPO" E FILTRAR EXTENSÕES
 # ======================================================
 tipos_validos = [
-    ".xlsx", ".csv", ".xls", ".ipynb", ".pbix", ".json", ".pdf", ".docx",
-    ".jpg", ".jpeg", ".png", ".gif", ".bmp",  # imagens
-    ".mp4", ".avi", ".mkv", ".mov", ".wmv"     # vídeos
+    ".xlsx", ".csv", ".xls", ".ipynb", ".pbix", ".json", ".pdf", ".docx", #documentos
+    ".jpg", ".jpeg", ".png", ".bmp",  # imagens
+    ".mp4", ".avi", ".mkv", ".mov", ".wmv",     # vídeos
+    ".exe" #outros
 ]
 
 if "Nome" not in df.columns:
