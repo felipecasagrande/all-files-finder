@@ -76,7 +76,7 @@ st.success(f"✅ Arquivo carregado com {df.shape[0]:,} linhas e {df.shape[1]} co
 # ======================================================
 tipos_validos = [
     ".xlsx", ".csv", ".xls", ".ipynb", ".pbix", ".pdf", ".docx", #documentos
-    ".jpg", ".jpeg", ".png", ".bmp",  # imagens
+     ".bmp",  # imagens
     ".mp4", ".avi", ".mkv", ".mov", ".wmv",     # vídeos
     ".exe" #outros
 ]
